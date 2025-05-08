@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  telegrambot:
+    build: .
+    container_name: privateChadbot
+    restart: always
+    env_file: .env
+    volumes:
+      - ./used_links.txt:/app/used_links.txt
+      - ./subscriptions.json:/app/subscriptions.json
