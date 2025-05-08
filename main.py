@@ -57,27 +57,21 @@ def save_subscriptions(subs):
     with open(SUBSCRIPTIONS_FILE, "w") as f:
         json.dump(subs, f, indent=4)
 
-def get_username(user):  # Получаем строковый ключ
-    if user.username:
-        return f"@{user.username}"
-    else:
-        return f"{user.first_name}_{user.id}"
 
-def add_subscription(user: str, duration_days: int, price: int):
+def add_subscription(username: str, user_id: int, duration_days: int, price: int):
     subs = load_subscriptions()
-    username = get_username(user)
     end_date = (datetime.now() + timedelta(days=duration_days)).strftime("%Y-%m-%d")
 
     subs[username] = {
+        "id": user_id,
         "duration_days": duration_days,
         "price": price,
         "end_date": end_date
     }
     save_subscriptions(subs)
 
-def get_subscription_info(user):
+def get_subscription_info(username):
     subs = load_subscriptions()
-    username = get_username(user)
     entry = subs.get(username)
     if not entry:
         return None
@@ -104,7 +98,7 @@ async def start(message: types.Message):
 
 @dp.callback_query(F.data == "subs")
 async def show_subscriptions(callback: types.CallbackQuery):
-    info = get_subscription_info(callback.from_user.id)
+    info = get_subscription_info(callback.from_user.username)
     if info:
         await callback.message.answer(
             f"Ваши подписки:\n"
@@ -186,10 +180,10 @@ async def receive_tx_hash(message: types.Message):
     plan = plan_data["plan"]
     username = plan_data["username"]
 
-    if plan == "paid_plan_1":
+    if plan == "paid_plan_2":
         duration = 14
         price = 30
-    elif plan == "paid_plan_2":
+    elif plan == "paid_plan_1":
         duration = 30
         price = 50
     elif plan == "paid_plan_3":
@@ -199,7 +193,7 @@ async def receive_tx_hash(message: types.Message):
         await message.answer("Ошибка данных плана.")
         return
 
-    add_subscription(username, duration, price)
+    add_subscription(username, user_id, duration, price)
 
     admin_text = (
         f"Новая оплата!\n"
@@ -214,7 +208,7 @@ async def receive_tx_hash(message: types.Message):
     ])
     await bot.send_message(ADMIN_ID, admin_text, reply_markup=kb)
 
-    await message.answer("Отлично! Ваша транзакция проверяется. Обычно проверка занимает не более 1 часа.")
+    await message.answer("Отлично! Ваша транзакция проверяется. Обычно проверка занимает не более суток.")
 
 @dp.callback_query(F.data.startswith("approve_"))
 async def send_link(callback: types.CallbackQuery):
