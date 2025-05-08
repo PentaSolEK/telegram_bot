@@ -57,24 +57,32 @@ def save_subscriptions(subs):
     with open(SUBSCRIPTIONS_FILE, "w") as f:
         json.dump(subs, f, indent=4)
 
-def add_subscription(user_id: int, duration_days: int, price: int):
+def get_username(user):  # Получаем строковый ключ
+    if user.username:
+        return f"@{user.username}"
+    else:
+        return f"{user.first_name}_{user.id}"
+
+def add_subscription(user: str, duration_days: int, price: int):
     subs = load_subscriptions()
-    subs[str(user_id)] = {
+    username = get_username(user)
+    end_date = (datetime.now() + timedelta(days=duration_days)).strftime("%Y-%m-%d")
+
+    subs[username] = {
         "duration_days": duration_days,
         "price": price,
-        "start_date": datetime.now().strftime("%Y-%m-%d")
+        "end_date": end_date
     }
     save_subscriptions(subs)
 
-def get_subscription_info(user_id: int):
+def get_subscription_info(user):
     subs = load_subscriptions()
-    entry = subs.get(str(user_id))
+    username = get_username(user)
+    entry = subs.get(username)
     if not entry:
         return None
 
-    start_date = datetime.strptime(entry["start_date"], "%Y-%m-%d")
-    duration = timedelta(days=entry["duration_days"])
-    end_date = start_date + duration
+    end_date = datetime.strptime(entry["end_date"], "%Y-%m-%d")
     remaining_days = (end_date - datetime.now()).days
 
     if remaining_days < 0:
@@ -82,7 +90,8 @@ def get_subscription_info(user_id: int):
 
     return {
         "days_total": entry["duration_days"],
-        "days_left": remaining_days
+        "days_left": remaining_days,
+        "end_date": entry["end_date"]
     }
 
 @dp.message(CommandStart())
@@ -190,7 +199,7 @@ async def receive_tx_hash(message: types.Message):
         await message.answer("Ошибка данных плана.")
         return
 
-    add_subscription(user_id, duration, price)
+    add_subscription(username, duration, price)
 
     admin_text = (
         f"Новая оплата!\n"
